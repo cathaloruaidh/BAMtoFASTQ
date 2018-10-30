@@ -1,0 +1,88 @@
+BAMtoFASTQ Scripts Description
+
+
+01_mergeBAM
+INPUT: Prefix <FILE> of BAM files
+OUTPUT: MERGED_INPUT_BAM = FILE_merged.bam
+FUNCTION: Merge all BAM files of the format <FILE>_partNNN.bam for integer NNN.
+
+
+02_fixIndex
+INPUT: MERGED_INPUT_BAM = FILE_merged.bam
+OUTPUT: INDEX_INPUT_BAM = FILE_merged.ind.bam
+FUNCTION: Fix index errors with the reads by converting BAM -> SAM -> BAM with no other changes. 
+
+
+03_clean
+INPUT: INDEX_INPUT_BAM = FILE_merged.ind.bam
+OUTPUT: CLEAN_INPUT_BAM = FILE_merged.ind.clean.bam
+FUNCTION: Run Picard's CleanSam on BAM. Fixes soft-clipping errors and sets MAPQ to 0 for unmapped reads. 
+
+
+04_fixMate
+INPUT: CLEAN_INPUT_BAM = FILE_merged.ind.clean.bam
+OUTPUT: MATE_INPUT_BAM = FILE_merged.ind.clean.mate.bam
+FUNCTION: Run Picard's FixMateInformation on BAM. Ensures all mate-pair information is in sync
+
+
+05_rg
+INPUT: MATE_INPUT_BAM = FILE_merged.ind.clean.mate.bam
+OUTPUT: RG_INPUT_BAM = FILE_merged.ind.clean.mate.rg.bam
+FUNCTION: Run Picard's AddOrReplaceReadGroups on BAM. Ensure all reads have same read group. 
+
+
+06_validate
+INPUT: RG_INPUT_BAM = FILE_merged.ind.clean.mate.rg.bam, aka READY_BAM
+OUTPUT: VALIDATE_INPUT_TXT = FILE_merged.ind.clean.mate.rg.validate.txt
+FUNCTION: Run Picard's ValidateSamFile on BAM. Ensure BAM is in correct SAM format. 
+
+
+07_index
+INPUT: READY_BAM = FILE.bam
+OUTPUT: FILE.bam.bai, 
+		TMP/all_contigs.bed
+		TMP/oth_contigs.bed
+		TMP/std_contigs.bed
+FUNCTION: Index the BAM file and find positions for the chromosomes. 
+
+
+08_chr
+INPUT: READY_BAM = FILE.bam
+OUTPUT: TMP/CHR/FILE.chrXXX.bam
+FUNCTION: Split BAM by chromosome, grouping all ``Others'' together.
+
+
+09_split
+INPUT: TMP/CHR/FILE.chrXXX.bam
+OUTPUT: TMP/SPLIT/FILE.chrXXX.split_NNN.bam
+FUNCTION: Split each chromosome BAM into 10 Mbp files. 
+
+
+10_shuf
+INPUT: TMP/SPLIT/FILE.chrXXX.split_NNN.bam
+OUTPUT: TMP/SHUF/FILE.chrXXX.split_NNN.shuf.bam
+FUNCTION: Randomly shuffle each 10 Mbp split file. 
+
+
+11_merge
+INPUT: TMP/SHUF/FILE.chrXXX.split_NNN.shuf.bam
+OUTPUT: MERGED_BAM = FILE_shuffled.bam, SORTED_BAM = FILE_shuffled.sort.bam
+FUNCTION: Merge all the shuffled 10 Mbp BAM files. 
+
+
+12_clean
+INPUT: SORTED_BAM = FILE_shuffled.sort.bam
+OUTPUT: CLEAN_BAM = FILE_shuffled.sort.clean.bam
+FUNCTION: Merge all BAM files of the format <FILE>_partNNN.bam for integer NNN.
+
+
+13_convert
+INPUT: CLEAN_BAM = FILE_shuffled.sort.clean.bam
+OUTPUT: FILE_R1.fastq, FILE_R2.fastq, FILE_unpaired.fastq
+FUNCTION: Convert the shuffled BAM to paired end FASTQ files, including unpairead reads. 
+
+
+14_compress
+INPUT: FASTQ files
+OUTPUT: FASTQ.GZ files
+FUNCTION: GZIP the FASTQ files. 
